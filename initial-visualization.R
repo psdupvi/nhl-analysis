@@ -1,11 +1,14 @@
 library(readxl)
 library(tidyverse)
 library(caret)
+library(ggalt)
 
 raw_data <- read_xlsx("raw-data.xlsx")
 
 head(raw_data)
 
+raw_data %>% ggplot(aes(x = ga, y = gf)) + geom_point() + geom_encircle(data = filter(raw_data, gp != 82), 
+                                                                        color = "Blue", size = 4)
 
 raw_data_2010 <- raw_data %>% filter(gp < 82) %>% mutate(pts = pts*82/gp,w = w*82/gp, l = l*82/gp, 
                                                     ga = ga*82/gp,gf = gf*82/gp, sow = sow*82/gp,
@@ -20,8 +23,8 @@ head(adjusted_data)
 
 adjusted_data %>% filter(playoff == T) %>% ggplot(aes(x = rank,y = pts)) + geom_boxplot(aes(group = rank))
 
-adjusted_data %>% ggplot(aes(y = pts, x = gf)) + geom_point(aes(color = year))
-adjusted_data %>% ggplot(aes(y = pts, x = ga)) + geom_point(aes(color = year))
-adjusted_data %>% ggplot(aes(y = pts, x = av_age)) + geom_point()
+adjusted_data %>% ggplot(aes(y = pts, x = gf)) + geom_point(aes(color = year)) + geom_smooth()
+adjusted_data %>% ggplot(aes(y = pts, x = ga)) + geom_point(aes(color = year)) + geom_smooth()
+adjusted_data %>% ggplot(aes(y = pts, x = av_age)) + geom_point() + geom_smooth()
 
 
