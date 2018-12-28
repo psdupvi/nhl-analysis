@@ -1,3 +1,18 @@
+RMSE <- function(expected_value,true_value){
+  sqrt(mean((expected_value - true_value)^2,na.rm = T))
+}
+## Create a RMSE function
+pythag <- nhl_data %>% mutate(pythag_wins = gp*gf^2.2/(gf^2.2+ga^2.2)) %>% .$pythag_wins
+
+pythag_rmse <- RMSE(pythag,nhl_data$w)
+## The baseline RMSE comes from the pythagorean expectation, a formula originally designed for baseball
+## by famed statistician Bill James.  It works for the NHL as well, with a slighly different value
+## 2.2 as opposed to roughly 1.83. For additional information see https://web.williams.edu/Mathematics/sjmiller/public_html/math/papers/DayaratnaMiller_HockeyFinal.pdf
+rmse_results <- data.frame(method = "Pythagorean Expectation", RMSE = pythag_rmse)
+rmse_results %>% knitr::kable()
+
+
+
 lm <- train(w ~ .,train_data_pts,method = "lm")
 
 lm_predictions <- unname(predict(lm,newdata = test_data_w))
