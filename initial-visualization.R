@@ -10,14 +10,17 @@ raw_data <- read_csv(raw_data_file)
 raw_data <- raw_data[rowSums(is.na(raw_data)) != ncol(raw_data),]
 test_data_file <- "https://raw.github.com/psdupvi/nhl-analysis/master/test-data.csv"
 test_data_pts <- read_csv(test_data_file)
-test_data_pts <- test_data[rowSums(is.na(test_data)) != ncol(test_data),]
-test_data_pts <- test_data %>% mutate(pts = pts*82/gp,w = w*82/gp, l = l*82/gp, 
+test_data_pts <- test_data[rowSums(is.na(test_data_pts)) != ncol(test_data_pts),]
+test_data_pts <- test_data_pts %>% mutate(pts = pts*82/gp,w = w*82/gp, l = l*82/gp, 
        ga = ga*82/gp,gf = gf*82/gp, sow = sow*82/gp,
        sol = sol*82/gp, evgf = evgf*82/gp, evga = evga*82/gp,
        pp = pp*82/gp, ppo = ppo*82/gp, ppoa = ppoa*82/gp,
        ppa = ppa*82/gp,sh = sh*82/gp, sha = sha*82/gp,
        shots = shots*82/gp, shots_against = shots_against*82/gp, gp = 82)
+## Make sure that test_data_pts is normalized to 82 poitnts
+
 test_data_pts <- na.omit(test_data_pts)
+
 ## Download the data from my github repository
 ## Tidy it up -- remove any rows which are only na
 head(raw_data)
@@ -35,7 +38,7 @@ raw_data_2010 <- raw_data %>% filter(gp < 82) %>% mutate(pts = pts*82/gp,w = w*8
                                                     shots = shots*82/gp, shots_against = shots_against*82/gp)    
 raw_data_not_2010 <- raw_data %>% filter(gp == 82)
 nhl_data <- rbind(raw_data_not_2010,raw_data_2010)
-
+test_data_playoffs <- filter(nhl_data, playoff == "Y")
 nhl_data_train <- nhl_data %>% select(-team,-rank,-gp,-w,-l,-ol,-sow,-sol, -pts_perc, -simp_rat_sys)
 ## Now all data is normalized to 82 games
 head(nhl_data)
