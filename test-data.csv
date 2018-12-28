@@ -1,4 +1,4 @@
-﻿team,rank,av_age,gp,w,l,ol,pts,pts_perc,gf,ga,sow,sol,simp_rat_sys,strength_of_sched,goal_game,evgf,evga,pp,ppo,pp_perc,ppa,ppoa,pk_perc,sh,sha,pm_game,o_pm_game,shots,shot_percent,shots_against,sv_percent,pdo,year
+﻿rank,team,av_age,gp,w,l,ol,pts,pts_perc,gf,ga,sow,sol,simp_rat_sys,strength_of_sched,goal_game,evgf,evga,pp,ppo,pp_perc,ppa,ppoa,pk_perc,sh,sha,pm_game,o_pm_game,shots,shot_percent,shots_against,sv_percent,pdo,year
 1,Tampa Bay Lightning,27,37,28,7,2,58,0.784,154,106,3,0,1.2,-0.1,7.03,109,83,37,128,28.91,21,123,82.93,5,2,8.7,9.2,1246,12.1,1192,0.911,101.1,2018
 2,Toronto Maple Leafs,27.3,37,25,10,2,52,0.703,140,103,0,0,0.94,-0.06,6.57,114,80,24,101,23.76,20,98,79.59,2,3,6.5,7.8,1170,12,1209,0.915,103.3,2018
 3,Winnipeg Jets,26.4,36,24,10,2,50,0.694,128,101,1,1,0.64,-0.11,6.36,91,79,33,115,28.7,20,108,81.48,3,1,10.1,9.4,1173,10.8,1184,0.916,100.1,2018
