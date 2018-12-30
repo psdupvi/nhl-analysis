@@ -1,0 +1,214 @@
+---
+title: "NHL Playoffs Analysis"
+author: "Pierre du Pont"
+date: "December 29, 2018"
+output: pdf_document
+---
+
+# Introduction
+The National Hockey League (NHL) is one of the four major sports leagues in the United States.  As a professional sports league with team operating incomes ranging from \$107 million (New York Rangers) to -\$21 million (Florida Panthers), data analytics have become increasingly important as teams look for an edge that can push them to the next level.  If a team makes the playoffs, they can expect large amounts of additional revenue through box office, sponsorships, and TV money, as well as an additional payout--part of \$15 million, depending on how far the team progresses.  So teams look for the stats that can drive them towards wins.
+
+The NHL playoffs take 16 teams, 8 from each conference, based on the total number of points that a team earns.  Theoretically, the top 8 teams in each conference make the playoffs, although this is not always the case due to the quirks of playoff qualifications.  Teams play 82 games per season, and the best teams will win almost 60 games in a season, while the worst can win as few as 20.  Teams earn two points for a win, no points for a loss in regular time, and one point for a loss in overtime or a shootout.
+
+But hockey is not the first sport to turn to analytics--and in fact, it is one of the last.  The first sport to see widespread use of analytics was baseball.  Bill James pioneered the use of SABRmetrics in the 80s, and since then baseball teams across the professional leagues (the MLB in the US) have used analytics with varying levels of success. 
+Today, we will focus on a specific type of analytics--how can we predict playoff appearances..  The data set is collected from [Hockey Reference](https://www.hockey-reference.com/) and goes back to the 2004 season.  We used this season because the NHL had a lockout resulting in a missed season.  Additionally, a result of the lockout was a series of rule changes that resulted in a very different style of play.  Therefore, data from before the lockout may show different trends.  We attempt to predict which teams make the playoffs using a series of categorical models, including random forest, discriminant analysis, and nearest neighbors.
+
+The data and code can be downloaded from [github](https://github.com/psdupvi/nhl-analysis), but will also be included (as necessary) in this document.  It can be downloaded using the following code (which also installs necessary packages:
+
+``` {r Download Data, echo = T, results = 'hide'}
+if(!require(lattice)) install.packages("lattice")
+if(!require(tidyverse)) install.packages("tidyverse")
+if(!require(caret)) install.packages("caret")
+if(!require(readxl)) install.packages("readxl")
+if(!require(ggalt)) install.packages("ggalt")
+
+raw_data_file <- "https://raw.github.com/psdupvi/nhl-analysis/master/raw-data.csv"
+raw_data <- read_csv(raw_data_file)
+raw_data <- raw_data[rowSums(is.na(raw_data)) != ncol(raw_data),]
+
+```
+
+# Methods 
+## Data Exploration and Cleaning
+
+Let's look at the raw data
+```{r echo = F}
+head(raw_data)
+```
+
+Our data contains 37 variables, although we only take some of them into our actual analysis.  Lets look at playoffs vs points and see if we notice any trends about the points required.  First, we turn playoffs into a factor, then find the maximum number of points that misses the playoffs each year.  Lets also find the average.
+
+```{r echo = F}
+raw_data$playoff <- as.factor(raw_data$playoff)
+
+missed_pts <- raw_data %>% filter(playoff == "N") %>% 
+  group_by(year) %>% 
+  summarize(missed = max(pts))
+missed_pts
+missed_pts_avg <- mean(missed_pts$missed)
+
+```
+
+
+We notice that something weird is happening in 2010.  The season was actually shortened due to a lockout.  So our first step was to normalize the data to 82 games using the following code
+
+```{r Normalizing, echo = T, results = 'hide'}
+raw_data_short <- raw_data %>% filter(gp < 82) %>% mutate(pts = pts*82/gp,w = w*82/gp, l = l*82/gp, 
+                                                         ga = ga*82/gp,gf = gf*82/gp, sow = sow*82/gp,
+                                                         sol = sol*82/gp, evgf = evgf*82/gp, 
+                                                         evga = evga*82/gp,
+                                                         pp = pp*82/gp, ppo = ppo*82/gp, 
+                                                         ppoa = ppoa*82/gp,
+                                                         ppa = ppa*82/gp, 
+                                                         sh = sh*82/gp, sha = sha*82/gp,
+                                                         shots = shots*82/gp, shots_against = shots_against*82/gp, 
+                                                         gp = 82)  
+
+raw_data_not_short <- raw_data %>% filter(gp == 82)
+ 
+nhl_data <- rbind(raw_data_not_short,raw_data_short)
+```
+
+Before we run the analysis again, let's make our train and test sets, as well as select relevant, non linearly combined columns from the sets. We also remove any rows containing the league average.  By linearly combined, we mean, for example, that wins are directly proportional to points, as are losses and points percentage.
+
+```{r echo = T}
+
+test_data_playoffs <- filter(nhl_data, year == 2017) %>% 
+  filter(team != "League Average") 
+train_data_playoffs <- filter(nhl_data, year != 2017) %>% 
+  filter(team != "League Average")
+
+train_set <- train_data_playoffs %>% select(-year,-champ,-runner, -team,-rank,-pts_perc,-gp,-year,-pk_perc,-pp_perc,-w,-l,-sol,-sow)
+
+
+```
+
+Let's try the analysis again, and this time plot the results as well, with the playoff vs. non playoff teams colored and the average points to make the playoffs included. 
+
+```{r test and train, echo = F}
+missed_pts <- train_data_playoffs %>% 
+  filter(playoff == "N") %>% 
+  group_by(year) %>% 
+  summarize(missed = max(pts))
+
+missed_pts_avg <- mean(missed_pts$missed)
+missed_pts
+
+train_data_playoffs %>% 
+  ggplot(aes(x = year, y = pts)) + 
+  geom_point(aes(color = playoff)) + 
+  geom_hline(yintercept = mean(missed_pts_avg))
+
+```
+
+Now we explore the results by team. Note that some teams have more success than others
+
+```{r echo = F}
+train_data_playoffs %>% filter(team != "League Average") %>% group_by(team) %>% summarize(avg = mean(pts), 
+                                                     playoffs = sum(playoff == "Y"), 
+                                                     finals = sum(champ == "Y" | runner == "Y"),
+                                                     cups = sum(champ == "Y")) %>% arrange(desc(avg))
+
+train_data_playoffs %>% filter(team != "League Average") %>% 
+  ggplot(aes(x = team, y = pts)) + 
+  geom_boxplot() + 
+  geom_point(aes(color = playoff))
+  theme(axis.text.x=element_text(angle = 90, vjust = 0.5))
+
+```
+
+## Modeling Approach
+At this point, lets start actually testing models.  As a classification problem, our first attempt is with a random forest method.  Luckily, our data set is small, so we don't lose much time even with the longer fitting methods.  We trained our model with the training set, and then tested our accuracy on the test set.
+
+```{r First attempt}
+
+fit <- train(playoff ~ ., data = train_set, method = "rf")
+pred <- predict(fit,newdata = test_data_playoffs)
+
+
+```
+
+This gives an accuracy of `r round(mean(pred == test_data_playoffs$playoff),2)`, which seems like a good start.  But there's a problem... A quick analysis of the predictions shows that the number of teams predicted to make the playoffs is `r sum(pred == "Y")`, which does not fit the NHL rules.  We actually went through approximately 10 models before we noticed this flaw.
+
+Luckily there's a workaround.  We set the type option in predict to "prob", which returns the probability of each classification instead of the actual predicted class.  
+
+```{r Fixed with prob setting}
+
+fit <- train(playoff ~ ., data = train_set, method = "rf")
+pred <- predict(fit,newdata = test_data_playoffs, type = "prob")
+head(pred)
+```
+
+We then selected the top 16 probabilities as our playoff teams (i.e., "Y"), and the remainder as missing the playoffs ("N").  Since we had 31 teams, this was an easy trick using median. Then we test the accuracy again
+
+```{r Fixed accuracy}
+
+pred$Y[pred$Y >= median(pred$Y)] <- "Y"
+pred$Y[pred$Y < median(pred$Y)] <- "N"
+
+acc <- mean(pred$Y == test_data_playoffs$playoff)
+
+```
+
+Our new accuracy is `r round(acc,2)`, which is actually an improvement.  This makes sense because our model was over predicting the number of playoff teams, and any over prediction is automatically wrong.
+
+## Models and Function
+
+We used a series of models of different types with an ensemble method as well to try to maximize our accuracy. We also created a data frame to store our predictions in
+
+``` {r models}
+models <- c("rf","lda",'naive_bayes','kknn','loclda',
+            'wsrf','avNNet','monmlp','adaboost','gbm','hda')
+
+combined_preds <- setNames(data.frame(matrix(ncol = length(models) + 1,
+                                             nrow = length(test_data_playoffs$w))),
+                           c(models,"Overall"))
+
+
+```
+
+Our function for quickly applying the models is as follows.  It fits the train data for each model, and then uses a for loop to turn the probability predictions into 16 playoff teams and 15 misses.  Then we use the predictions from each model to create our ensemble prediction.
+
+As the for loop is the most vague aspect, here is a quick rundown: the loop calculates a set of probabilities for each fit on the test set.  It then turns those probabilities into "Y" and "N", before inputting those into the combined predictions data frame.
+
+
+```{r function, results = "hide", echo = T}
+fits <- lapply(models, function(model){ 
+  print(model)
+  train(playoff ~ . , method = model, data = train_set)
+}) 
+
+for(i in 1:length(models)){
+  pred <- as.data.frame(predict(fits[i], newdata = test_data_playoffs, type = "prob"))
+  pred$Y[pred$Y >= median(pred$Y)] <- "Y"
+  pred$Y[pred$Y < median(pred$Y)] <- "N"
+  combined_preds[i] <- pred$Y
+}
+
+votes <- rowMeans(combined_preds == "Y", na.rm = TRUE)
+combined_preds$Overall <- ifelse(votes > 0.5, "Y", "N")
+
+```
+
+
+# Results
+```{r view results}
+combined_preds
+
+test_data_playoffs$playoff <- as.character(test_data_playoffs$playoff)
+## Need to switch back to a character for the test to actually work
+acc <- colMeans(combined_preds == test_data_playoffs$playoff)
+
+acc
+```
+
+From this, we can see that most of our models have accuracy between 85% and 95%, although a few show accuracy of 100%.  Our ensemble does not do as well as some individual models, which makes some sense--the ensemble is weighed down by some low scorers.  
+
+In general, it appears that the Heteroscedastic Discriminant Analysis model is the most accurate.
+
+# Conclusions and Next Steps
+
+It would appear that we can accurately predict playoff teams with a mean accuracy of `r mean(acc)`.  However, that is not as interesting as predicting which teams will be in the playoffs before the season ends.  Unfortunately, there is no way for us to test our predictions at this point, but a next step is to re-run this analysis at the current point of the NHL season and compare to the final results.
+
+Additionally, this model does not take one more factor into account: the conference and division of each team.  A better way to do this in the future would be to break the teams up into their conferences and divisions, then to more accurately model 8 teams from each conference.  However, this requires a much more serious analysis and we are not quite sure how to do that at this point.
+
