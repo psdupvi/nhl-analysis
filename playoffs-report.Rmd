@@ -3,6 +3,8 @@ title: "NHL Playoffs Analysis"
 author: "Pierre du Pont"
 date: "December 29, 2018"
 output: pdf_document
+documentclass: article
+classoption: a4paper
 ---
 
 # Introduction
@@ -53,16 +55,17 @@ missed_pts_avg <- mean(missed_pts$missed)
 We notice that something weird is happening in 2010.  The season was actually shortened due to a lockout.  So our first step was to normalize the data to 82 games using the following code
 
 ```{r Normalizing, echo = T, results = 'hide'}
-raw_data_short <- raw_data %>% filter(gp < 82) %>% mutate(pts = pts*82/gp,w = w*82/gp, l = l*82/gp, 
-                                                         ga = ga*82/gp,gf = gf*82/gp, sow = sow*82/gp,
-                                                         sol = sol*82/gp, evgf = evgf*82/gp, 
-                                                         evga = evga*82/gp,
-                                                         pp = pp*82/gp, ppo = ppo*82/gp, 
-                                                         ppoa = ppoa*82/gp,
-                                                         ppa = ppa*82/gp, 
-                                                         sh = sh*82/gp, sha = sha*82/gp,
-                                                         shots = shots*82/gp, shots_against = shots_against*82/gp, 
-                                                         gp = 82)  
+raw_data_short <- raw_data %>% filter(gp < 82) %>% 
+  mutate(pts = pts*82/gp,w = w*82/gp, l = l*82/gp, 
+         ga = ga*82/gp,gf = gf*82/gp, sow = sow*82/gp,
+         sol = sol*82/gp, evgf = evgf*82/gp, 
+         evga = evga*82/gp,
+         pp = pp*82/gp, ppo = ppo*82/gp, 
+         ppoa = ppoa*82/gp,
+         ppa = ppa*82/gp, 
+         sh = sh*82/gp, sha = sha*82/gp,
+         shots = shots*82/gp, shots_against = shots_against*82/gp, 
+         gp = 82)  
 
 raw_data_not_short <- raw_data %>% filter(gp == 82)
  
@@ -78,7 +81,10 @@ test_data_playoffs <- filter(nhl_data, year == 2017) %>%
 train_data_playoffs <- filter(nhl_data, year != 2017) %>% 
   filter(team != "League Average")
 
-train_set <- train_data_playoffs %>% select(-year,-champ,-runner, -team,-rank,-pts_perc,-gp,-year,-pk_perc,-pp_perc,-w,-l,-sol,-sow)
+train_set <- train_data_playoffs %>% select(-year, -champ, -runner,
+                                            -team, -rank, -pts_perc, 
+                                            -gp, -year, -pk_perc, 
+                                            -pp_perc, -w, -l, -sol, -sow)
 
 
 ```
@@ -172,7 +178,7 @@ Our function for quickly applying the models is as follows.  It fits the train d
 As the for loop is the most vague aspect, here is a quick rundown: the loop calculates a set of probabilities for each fit on the test set.  It then turns those probabilities into "Y" and "N", before inputting those into the combined predictions data frame.
 
 
-```{r function, results = "hide", echo = T}
+```{r function, results = "hide", echo = T, warning = F}
 fits <- lapply(models, function(model){ 
   print(model)
   train(playoff ~ . , method = model, data = train_set)
