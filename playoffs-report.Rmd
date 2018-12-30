@@ -112,7 +112,7 @@ train_data_playoffs %>% filter(team != "League Average") %>% group_by(team) %>% 
 train_data_playoffs %>% filter(team != "League Average") %>% 
   ggplot(aes(x = team, y = pts)) + 
   geom_boxplot() + 
-  geom_point(aes(color = playoff))
+  geom_point(aes(color = playoff)) +
   theme(axis.text.x=element_text(angle = 90, vjust = 0.5))
 
 ```
